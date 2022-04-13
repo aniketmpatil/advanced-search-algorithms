@@ -1,6 +1,7 @@
 # Standard Algorithm Implementation
 # Sampling-based Algorithms RRT and RRT*
 
+from turtle import shape
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy import spatial
@@ -104,18 +105,54 @@ class RRT:
         #### TODO ####
         # Generate a random point in an ellipsoid
         else:
-            pass
+            
             # Compute the distance between start and goal - c_min
+            c_min = self.dis(self.start, self.goal)
 
             # Calculate center of the ellipsoid - x_center
-
+            x_center_row = (self.goal.row + self.start.row)/2
+            x_center_col = (self.goal.col + self.start.col)/2
+            x_center = Node(x_center_row, x_center_col)
+            
             # Compute rotation matrix from elipse to world frame - C
+            a1 = np.empty(shape=(3,1))
+            a1[0] = (self.goal.row - self.start.row) / c_min
+            a1[1] = (self.goal.col - self.start.col) / c_min
+            a1[2] = 0
+
+            I1 = np.atleast_2d(np.eye(3)[0:3, 0]).T
+
+            M = np.dot(a1, I1.T)
+
+            U, S, V_T = np.linalg.svd(M, full_matrices=True)
+            V = V_T.T
+
+            det_U = np.linalg.det(U)
+            det_V = np.linalg.det(V)
+
+            diag = np.diag([1, 1, det_U*det_V])
+            C = np.dot(U, np.dot(diag, V_T))
 
             # Compute diagonal matrix - L
+            r1 = c_best/2
+            r2 = np.sqrt(c_best**2 - c_min**2)/2
+            r3 = r2
+            L = np.diag([r1, r2, r3])
 
             # Cast a sample from a unit ball - x_ball
+            num = 1
+            dim = 2
+            u = np.random.normal(0, 1, (num, dim + 2))
+            norm = np.linalg.norm(u, axis = -1,keepdims = True)
+            u = u/norm
+
+            #The first N coordinates are uniform in a unit N ball
+            x_ball = np.zeros((3, 1))
+            x_ball[0:2, :] = np.atleast_2d(u[0,:dim]).T
             
             # Map ball sample to the ellipsoid - x_rand
+            x_rand = np.dot(C, np.dot(L, x_ball)) + np.atleast_2d(np.array([x_center.row, x_center.col, 0])).T
+            point = [x_rand[0][0], x_rand[1][0]]
 
         #### TODO END ####
 
@@ -152,13 +189,10 @@ class RRT:
 
         #### TODO ####
 
-        new_point = self.get_new_point(goal_bias) #del this
-
-        # Regular sampling if c_best <= 0
-        # using self.get_new_point
-        
-        # Sampling in an ellipsoid if c_best is a positive value
-        # using self.get_new_point_in_ellipsoid
+        if c_best <= 0:
+            new_point = self.get_new_point(goal_bias)
+        else:
+            new_point = self.get_new_point_in_ellipsoid(goal_bias, c_best)
         
         #### TODO END ####
 
@@ -404,6 +438,8 @@ class RRT:
             c_best = 0
             # Once a path is found, update the best length of path - c_best
             # using the function self.path_cost(self.start, self.goal)
+            if self.found:
+                c_best = self.path_cost(self.start, self.goal)
 
             #### TODO END ####
 

@@ -1,6 +1,9 @@
+from dis import dis
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 import math
+
+from sklearn import neighbors
 
 # Class for each node in the grid
 class Node:
@@ -137,15 +140,46 @@ class DStar:
         '''
         #### TODO ####
         # Pop node from open list
-        
+        node = self.open.pop()
+        k_old = self.get_k_min()
+                
         # Get neighbors of the node
         # using self.get_neighbors
+        neighbors = self.get_neighbors(node)
         
         # If node k is smaller than h (RAISE)
-
+        if(k_old < node.h):
+            for neighbor in neighbors:
+                if ((neighbor.h <= k_old) and (node.h > (neighbor.h + self.cost(neighbor, node)))):
+                    node.parent = neighbor
+                    node.h = neighbor.h + self.cost(neighbor, node)
         # If node k is the same as h (LOWER)
-
+        elif(k_old == node.h):
+            for neighbor in neighbors:
+                if ((neighbor.tag == "NEW") or \
+                    ((neighbor.parent == node) and (neighbor.h != (node.h + self.cost(neighbor, node)))) or \
+                        ((neighbor.parent != node) and (neighbor.h > node.h + self.cost(node, neighbor)))):
+                        neighbor.parent = node
+                        ## INSERT
+                        
         # Else node k is smaller than h (RASIE)
+        else:
+            for neighbor in neighbors:
+                if ((neighbor.tag == "NEW") or \
+                    ((neighbor.parent == node) and (neighbor.h != (node.h + self.cost(neighbor, node))))):
+                    neighbor.parent = node
+                    ## INSERT
+                else:
+                    if(neighbor.parent != node) and (neighbor.h > node.h + self.cost(node, neighbor)):
+                        ## INSERT
+                        pass
+                    else:
+                        if(neighbor.parent != node) and \
+                            (node.h > neighbor.h + self.cost(node, neighbor)) and \
+                                (neighbor.tag == "CLOSED") and \
+                                    (neighbor.h > k_old):
+                                    ## INSERT
+                                    pass
 
         #### TODO END ####
 
@@ -159,11 +193,16 @@ class DStar:
         #### TODO ####
         # Call self.process_state() until it returns k_min >= h(Y) or open list is empty
         # The cost change will be propagated
+        while(1):
+            k_min = self.process_state()
+            if(k_min >= node.h) or (len(self.open) == 0):
+                break
 
+        self.get_backpointer_list(node)
         #### TODO END ####
         
 
-    def modify_cost(self, obsatcle_node, neighbor):
+    def modify_cost(self, obstacle_node, neighbor):
         ''' Modify the cost from the affected node to the obstacle node and 
             put it back to the open list
         ''' 
@@ -172,7 +211,9 @@ class DStar:
         # by setting the obstacle_node.is_obs to True (see self.cost())
         
         # Put the obsatcle node and the neighbor node back to Open list 
-        
+        if(obstacle_node.tag == "CLOSED"):
+            # self.insert()
+            pass
         #### TODO END ####
 
         return self.get_k_min()
@@ -185,13 +226,16 @@ class DStar:
         '''
         #### TODO ####
         # Sense the neighbors to see if they are new obstacles
-        
+        neighbors = self.get_neighbors(node)
+
+        for neighbor in neighbors:
             # If neighbor.is_dy_obs == True but neighbor.is_obs == Flase, 
             # the neighbor is a new dynamic obstacle
-            
+
+            if (neighbor.is_dy_obs == True) and (neighbor.is_obs == False):            
                 # Modify the cost from this neighbor node to all this neighbor's neighbors
                 # using self.modify_cost
-
+                pass
         #### TODO END ####
 
 

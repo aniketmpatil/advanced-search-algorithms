@@ -140,12 +140,17 @@ class DStar:
         '''
         #### TODO ####
         # Pop node from open list
-        node = self.open.pop()
-        k_old = self.get_k_min()
+        node = self.min_node()
+        
+        if node is None:
+            return -1
                 
         # Get neighbors of the node
         # using self.get_neighbors
         neighbors = self.get_neighbors(node)
+
+        k_old = self.get_k_min()
+        self.delete(node)
         
         # If node k is smaller than h (RAISE)
         if(k_old < node.h):
@@ -154,13 +159,13 @@ class DStar:
                     node.parent = neighbor
                     node.h = neighbor.h + self.cost(neighbor, node)
         # If node k is the same as h (LOWER)
-        elif(k_old == node.h):
+        if(k_old == node.h):
             for neighbor in neighbors:
                 if ((neighbor.tag == "NEW") or \
                     ((neighbor.parent == node) and (neighbor.h != (node.h + self.cost(neighbor, node)))) or \
                         ((neighbor.parent != node) and (neighbor.h > node.h + self.cost(node, neighbor)))):
                         neighbor.parent = node
-                        ## INSERT
+                        self.insert(neighbor, node.h + self.cost(node, neighbor))
                         
         # Else node k is smaller than h (RASIE)
         else:
@@ -168,18 +173,16 @@ class DStar:
                 if ((neighbor.tag == "NEW") or \
                     ((neighbor.parent == node) and (neighbor.h != (node.h + self.cost(neighbor, node))))):
                     neighbor.parent = node
-                    ## INSERT
+                    self.insert(neighbor, node.h + self.cost(node, neighbor))
                 else:
                     if(neighbor.parent != node) and (neighbor.h > node.h + self.cost(node, neighbor)):
-                        ## INSERT
-                        pass
+                        self.insert(node, node.h)
                     else:
                         if(neighbor.parent != node) and \
-                            (node.h > neighbor.h + self.cost(node, neighbor)) and \
+                            (node.h > neighbor.h + self.cost(neighbor, node)) and \
                                 (neighbor.tag == "CLOSED") and \
                                     (neighbor.h > k_old):
-                                    ## INSERT
-                                    pass
+                                    self.insert(neighbor, neighbor.h)
 
         #### TODO END ####
 
@@ -193,9 +196,9 @@ class DStar:
         #### TODO ####
         # Call self.process_state() until it returns k_min >= h(Y) or open list is empty
         # The cost change will be propagated
-        while(1):
+        while True:
             k_min = self.process_state()
-            if(k_min >= node.h) or (len(self.open) == 0):
+            if(k_min >= node.h) or (len(self.open) == 0) or (k_min == -1):
                 break
 
         self.get_backpointer_list(node)
@@ -211,9 +214,9 @@ class DStar:
         # by setting the obstacle_node.is_obs to True (see self.cost())
         
         # Put the obsatcle node and the neighbor node back to Open list 
+        # obstacle_node.is_obs = True
         if(obstacle_node.tag == "CLOSED"):
-            # self.insert()
-            pass
+            self.insert(obstacle_node, obstacle_node.h)
         #### TODO END ####
 
         return self.get_k_min()
@@ -235,7 +238,12 @@ class DStar:
             if (neighbor.is_dy_obs == True) and (neighbor.is_obs == False):            
                 # Modify the cost from this neighbor node to all this neighbor's neighbors
                 # using self.modify_cost
-                pass
+                neighbor.is_obs = True
+                if neighbor.tag == "CLOSED":
+                    self.insert(neighbor, math.inf)
+                affected_neighbors = self.get_neighbors(neighbor)
+                for new_neighbor in affected_neighbors:
+                    self.modify_cost(node, new_neighbor)
         #### TODO END ####
 
 
@@ -274,6 +282,12 @@ class DStar:
         
             # Process until open set is empty or start is reached
             # using self.process_state()
+        self.goal.h = 0
+        self.insert(self.goal, self.goal.h)
+        while True:
+            k_min = self.process_state()
+            if self.start.tag == "CLOSED" or k_min == -1:
+                break
             
         
         # Visualize the first path if found
@@ -286,26 +300,28 @@ class DStar:
         # Start from start to goal
         # Update the path if there is any change in the map
 
+        curr_node = self.start
+        while curr_node != self.goal:
             # Check if any repair needs to be done
             # using self.prepare_repair
-
+            self.prepare_repair(curr_node)
             # Replan a path from the current node
             # using self.repair_replan
-
+            self.repair_replan(curr_node)
             # Get the new path from the current node
-            
+            self.get_backpointer_list(curr_node)
             # Uncomment this part when you have finished the previous part
             # for visualizing each move and replanning
-            '''
+            
             # Visualize the path in progress
             self.draw_path(self.dynamic_grid, "Path in progress")
 
             if self.path == []:
                 print("No path is found")
                 return
-            '''
+            
             # Get the next node to continue
-
+            curr_node = curr_node.parent
         #### TODO END ####
                 
 
@@ -357,3 +373,6 @@ class DStar:
         plt.axis('scaled')
         plt.gca().invert_yaxis()
         plt.show()
+        # plt.show(block=False)
+        # plt.pause(0.6)
+        # plt.close()

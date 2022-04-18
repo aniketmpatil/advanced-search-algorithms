@@ -38,6 +38,11 @@ if __name__ == "__main__":
     RRT_planner = RRT(map_array, start, goal)
 
     # Search with RRT and RRT*
+    print("RRT search")
     RRT_planner.RRT(n_pts=1000)
+
+    print("RRT* search")
     RRT_planner.RRT_star(n_pts=2000)
+
+    print("Informed RRT* search")
     RRT_planner.informed_RRT_star(n_pts=2000)
